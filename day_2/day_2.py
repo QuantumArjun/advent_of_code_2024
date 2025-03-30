@@ -1,6 +1,10 @@
 '''
 Advent of Code Day 2
 author: akaranam
+
+This solution checks reports for safety based on two rules:
+1. Numbers must be all increasing or all decreasing
+2. Adjacent numbers must differ by 1-3
 '''
 
 def read_reports(file_name):
@@ -9,65 +13,69 @@ def read_reports(file_name):
     :param file_name: Name of the input file.
     :return: An array of arrays
     """
-    # First, read in the input file
     report_list = []
-    
-    with open(file_name, 'r') as file:
-        for line in file:
-            report = line.split()
-            report_list.append(report)
-            
+    with open(file_name, 'r') as f:
+        for line in f:
+            # Convert each line to a list of integers
+            report_list.append([int(x) for x in line.strip().split()])
     return report_list
 
-def safety_check(report_list): 
-    num_safe = 0
-    for report in report_list:
-        if check_single_report(report):
-            num_safe += 1
+def is_safe_report(report, use_dampener=False):
+    """
+    Check if a report is safe based on the rules:
+    1. Numbers must be all increasing or all decreasing
+    2. Adjacent numbers must differ by 1-3
     
-    return num_safe
-
-def within_bounds(num1, num2, increasing):
-    if increasing: 
-        upper_bound = (num1 + 1, num1 + 3)
-        if num2 >= upper_bound[0] and num2 <= upper_bound[1]:
-            return True 
-        else: 
-            return False
+    With Problem Dampener (use_dampener=True), a report is safe if removing
+    any single number would make it safe.
     
-    else: 
-        lower_bound = (num1 - 1, num1 - 3)
-        if num2 <= lower_bound[0] and num2 >= lower_bound[1]:
-            return True 
-        else:
-            return False
-        
-def check_single_report(report):
-    
-    # Deal with special cases 
-    if len(report) == 1:
-        return True 
-    
-    # If we get here, we know if is at least 2 long, and can establish the direction
-    increasing = True
-    if int(report[1]) < int(report[0]):
-        increasing = False
-    
-    # Now iterate through and see if the rules are violated 
-        
-    prev_result = None
-    for result in report:
-        if prev_result != None:
-            if not within_bounds(int(prev_result), int(result), increasing):
+    Args:
+        report (list): List of integers representing the report
+        use_dampener (bool): Whether to use the Problem Dampener
+    Returns:
+        bool: True if the report is safe, False otherwise
+    """
+    def is_valid_sequence(nums):
+        if len(nums) < 2:
+            return True
+            
+        is_increasing = None
+        for i in range(1, len(nums)):
+            diff = nums[i] - nums[i-1]
+            
+            # First determine if sequence is increasing or decreasing
+            if is_increasing is None:
+                is_increasing = diff > 0
+            
+            # Check if direction matches and difference is within bounds
+            if (diff > 0) != is_increasing:
                 return False
-        prev_result = result
+            if abs(diff) < 1 or abs(diff) > 3:
+                return False
+        return True
     
-    return True   
+    # First check if the sequence is valid without dampener
+    if is_valid_sequence(report):
+        return True
+        
+    # If dampener is enabled and sequence is invalid, try removing each number
+    if use_dampener:
+        for i in range(len(report)):
+            # Create new list without the i-th element
+            dampened_report = report[:i] + report[i+1:]
+            if is_valid_sequence(dampened_report):
+                return True
+                
+    return False
 
 
 if __name__ == '__main__':
     report_list = read_reports("day_2_input.txt")
-    print(report_list[0])
-    num_safe = safety_check(report_list)
-    print(num_safe)
     
+    # Part 1: Without Problem Dampener
+    safe_count = sum(1 for report in report_list if is_safe_report(report))
+    print(f"Part 1 - Number of safe reports: {safe_count}")
+    
+    # Part 2: With Problem Dampener
+    safe_count_dampened = sum(1 for report in report_list if is_safe_report(report, use_dampener=True))
+    print(f"Part 2 - Number of safe reports with dampener: {safe_count_dampened}")
